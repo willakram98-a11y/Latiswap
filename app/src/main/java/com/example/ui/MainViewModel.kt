@@ -116,30 +116,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true) }
-            val dictionary = repository.getAllPairs()
+            try {
+                val dictionary = repository.getAllPairs()
 
-            if (dictionary.isEmpty()) {
+                if (dictionary.isEmpty()) {
+                    _uiState.update { it.copy(isProcessing = false) }
+                    notify("No active dictionary! Upload a CSV or load sample pairs / لا يوجد قاموس نشط! يرجى تحميل ملف CSV", isError = true)
+                    return@launch
+                }
+
+                val result = withContext(Dispatchers.Default) {
+                    TextProcessor.process(input, dictionary)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        outputText = result.outputText,
+                        lastProcessResult = result,
+                        isProcessing = false
+                    )
+                }
+
+                if (result.totalReplacements > 0) {
+                    notify("Replaced ${result.totalReplacements} words / تم استبدال ${result.totalReplacements} كلمات")
+                } else {
+                    notify("No matching words found in dictionary / لم يتم العثور على كلمات مطابقة في القاموس")
+                }
+            } catch (e: Throwable) {
+                android.util.Log.e("MainViewModel", "Error while processing text", e)
                 _uiState.update { it.copy(isProcessing = false) }
-                notify("No active dictionary! Upload a CSV or load sample pairs / لا يوجد قاموس نشط! يرجى تحميل ملف CSV", isError = true)
-                return@launch
-            }
-
-            val result = withContext(Dispatchers.Default) {
-                TextProcessor.process(input, dictionary)
-            }
-
-            _uiState.update {
-                it.copy(
-                    outputText = result.outputText,
-                    lastProcessResult = result,
-                    isProcessing = false
-                )
-            }
-
-            if (result.totalReplacements > 0) {
-                notify("Replaced ${result.totalReplacements} words / تم استبدال ${result.totalReplacements} كلمات")
-            } else {
-                notify("No matching words found in dictionary / لم يتم العثور على كلمات مطابقة في القاموس")
+                notify("Failed to process text: ${e.localizedMessage ?: "Unknown error"}", isError = true)
             }
         }
     }

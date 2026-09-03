@@ -167,7 +167,7 @@ fun TextOutputCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 160.dp, max = 300.dp)
+                    .heightIn(min = 140.dp)
                     .border(
                         width = 1.dp,
                         color = if (outputText.isNotEmpty()) {
@@ -193,25 +193,19 @@ fun TextOutputCard(
                         )
                     )
                 } else {
-                    SelectionContainer(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Column(
+                    SelectionContainer {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = outputText,
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    textDirection = TextDirection.Content,
+                                    lineHeight = 24.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(end = 40.dp) // Leave space for quick copy button
-                            ) {
-                                Text(
-                                    text = outputText,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        textDirection = TextDirection.Content,
-                                        lineHeight = 24.sp
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                                    .fillMaxWidth()
+                                    .padding(end = 36.dp)
+                            )
 
                             // Quick copy button inside the top-end corner of the field
                             DisableSelection {
@@ -227,7 +221,7 @@ fun TextOutputCard(
                                     },
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
-                                        .size(36.dp)
+                                        .size(32.dp)
                                         .background(
                                             color = if (copiedRecently) {
                                                 MaterialTheme.colorScheme.primaryContainer
@@ -246,7 +240,7 @@ fun TextOutputCard(
                                         } else {
                                             MaterialTheme.colorScheme.onSecondaryContainer
                                         },
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }

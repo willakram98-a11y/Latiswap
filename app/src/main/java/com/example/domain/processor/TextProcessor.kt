@@ -30,34 +30,62 @@ object TextProcessor {
             )
         }
 
+        return try {
+            executeReplacement(inputText, dictionary)
+        } catch (e: Throwable) {
+            // Fallback safety: return original text with 0 replacements if any unexpected error occurs
+            ProcessResult(
+                outputText = inputText,
+                totalReplacements = 0,
+                details = emptyList()
+            )
+        }
+    }
+
+    private fun executeReplacement(inputText: String, dictionary: List<SynonymPair>): ProcessResult {
         // Sort dictionary pairs by word length descending so compound words/phrases
         // are processed before shorter substrings (e.g. "in order to" before "in")
         val sortedPairs = dictionary
             .filter { it.word.isNotBlank() && it.synonym.isNotBlank() }
             .sortedByDescending { it.word.length }
 
+        if (sortedPairs.isEmpty()) {
+            return ProcessResult(inputText, 0, emptyList())
+        }
+
         var currentText = inputText
         var totalCount = 0
         val stats = mutableListOf<ReplacementStat>()
 
         for (pair in sortedPairs) {
-            val escapedWord = Regex.escape(pair.word.trim())
-            // Negative lookbehind and lookahead on Unicode letters, numbers, and underscores
-            // ensures exact boundary matching across English, Arabic, and all Unicode scripts
-            val regex = Regex("(?U)(?<![\\p{L}\\p{N}_])$escapedWord(?![\\p{L}\\p{N}_])", RegexOption.IGNORE_CASE)
+            val word = pair.word.trim()
+            val synonym = pair.synonym.trim()
+            if (word.isEmpty() || synonym.isEmpty()) continue
+
+            val escapedWord = Regex.escape(word)
+            // Safe Unicode boundary pattern:
+            // Lookbehind (?<=^|[^\p{L}\p{N}_]) and lookahead (?=$|[^\p{L}\p{N}_])
+            // Standard across all Android API levels without depending on (?U) flag
+            val pattern = "(?<=^|[^\\p{L}\\p{N}_])$escapedWord(?=$|[^\\p{L}\\p{N}_])"
+            val regex = try {
+                Regex(pattern, RegexOption.IGNORE_CASE)
+            } catch (e: Exception) {
+                // Fallback to literal boundary if complex pattern fails
+                Regex("\\b$escapedWord\\b", RegexOption.IGNORE_CASE)
+            }
 
             var pairMatches = 0
             currentText = regex.replace(currentText) { matchResult ->
                 pairMatches++
                 totalCount++
-                adaptCase(matchedText = matchResult.value, replacement = pair.synonym.trim())
+                adaptCase(matchedText = matchResult.value, replacement = synonym)
             }
 
             if (pairMatches > 0) {
                 stats.add(
                     ReplacementStat(
-                        originalWord = pair.word,
-                        replacementWord = pair.synonym,
+                        originalWord = word,
+                        replacementWord = synonym,
                         occurrences = pairMatches
                     )
                 )
@@ -79,6 +107,7 @@ object TextProcessor {
      * - Preserves unchanged for scripts without casing (e.g. Arabic) or mixed casing.
      */
     fun adaptCase(matchedText: String, replacement: String): String {
+        if (replacement.isEmpty()) return ""
         val letters = matchedText.filter { it.isLetter() }
         if (letters.isEmpty()) return replacement
 
