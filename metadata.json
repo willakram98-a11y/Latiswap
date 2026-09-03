@@ -1,0 +1,6 @@
+{
+  "name": "Synonym Replacer",
+  "description": "Text processing and synonym replacement tool powered by user-uploaded CSV dictionaries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
